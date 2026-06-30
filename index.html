@@ -2,219 +2,274 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>No-Key Learning AI</title>
-
+<title>Homemade AI Version 16</title>
 <style>
-body{
-  margin:0;
-  font-family:Arial,sans-serif;
-  background:#111827;
-  color:white;
-}
-header{
-  background:#020617;
-  padding:18px;
-  text-align:center;
-  font-size:26px;
-  font-weight:bold;
-}
-#chat{
-  height:74vh;
-  overflow-y:auto;
-  padding:14px;
-}
-.msg{
-  padding:14px;
-  margin:10px 0;
-  border-radius:14px;
-  line-height:1.4;
-  font-size:17px;
-}
-.user{
-  background:#2563eb;
-  text-align:right;
-}
-.bot{
-  background:#374151;
-}
-.box{
-  display:flex;
-  gap:8px;
-  padding:10px;
-  background:#020617;
-}
-input{
-  flex:1;
-  padding:15px;
-  font-size:16px;
-  border:none;
-  border-radius:10px;
-}
-button{
-  padding:15px;
-  border:none;
-  border-radius:10px;
-  background:#22c55e;
-  color:white;
-  font-weight:bold;
-  font-size:16px;
-}
-.searchBtn{
-  background:orange;
-  color:black;
-  margin-top:10px;
-}
+body{margin:0;background:#111;color:white;font-family:Arial,sans-serif;}
+#loginScreen{padding:25px;max-width:430px;margin:auto;}
+#app{display:none;height:100vh;}
+#side{width:220px;background:#000;padding:10px;overflow-y:auto;}
+#main{flex:1;padding:15px;}
+#chat{border:2px solid #444;height:70vh;overflow-y:auto;padding:10px;background:#1a1a1a;border-radius:10px;}
+input{padding:12px;font-size:16px;margin:4px;border-radius:7px;border:none;}
+#input{width:55%;}
+button{padding:10px;margin:3px;border:none;border-radius:6px;background:#22c55e;color:white;font-weight:bold;}
+pre{background:#000;padding:10px;border-radius:8px;white-space:pre-wrap;overflow:auto;}
+.chatBtn{display:block;width:100%;text-align:left;background:#222;color:white;margin-top:5px;}
+.smallBtn{background:#f59e0b;color:black;}
+.danger{background:#dc2626;}
+.note{color:#bbb;font-size:13px;line-height:1.3;}
 </style>
 </head>
-
 <body>
 
-<header>🧠 No-Key Learning AI</header>
+<div id="loginScreen">
+  <h1>🤖 Homemade AI Login</h1>
+  <input id="username" placeholder="Username"><br>
+  <input id="password" placeholder="Password" type="password"><br>
+  <button id="createBtn">Create Account 👤</button>
+  <button id="loginBtn">Login 🔐</button>
+  <p id="loginMsg"></p>
+</div>
 
-<div id="chat">
-  <div class="msg bot">
-    Hi! I work without an API key. I can answer simple things, remember what you teach me, and search the web when I do not know.
+<div id="app">
+  <div id="side">
+    <h3>💬 Chats</h3>
+    <p id="userLabel"></p>
+    <button id="newBtn">➕ New Chat</button>
+    <button id="logoutBtn">🚪 Logout</button>
+    <button id="exportBtn" class="smallBtn">⬇️ Export Brain</button>
+    <button id="clearBrainBtn" class="danger">🧹 Clear Brain</button>
+    <p class="note">No API key. Searches public websites that allow browser access.</p>
+    <div id="chatList"></div>
+  </div>
+
+  <div id="main">
+    <h1>🤖 Homemade AI Version 16 🌐</h1>
+    <h3 id="chatTitle"></h3>
+    <div id="chat"></div><br>
+    <input id="input" placeholder="Ask me anything...">
+    <button id="sendBtn">Send 🚀</button>
+    <button id="deleteBtn">Delete 🗑️</button>
   </div>
 </div>
 
-<div class="box">
-  <input id="input" placeholder="Ask me something...">
-  <button onclick="send()">Send</button>
-</div>
-
 <script>
-const chat = document.getElementById("chat");
-const input = document.getElementById("input");
+let currentUser=null;
+let chats={};
+let currentChat="Chat 1";
 
-let brain = JSON.parse(localStorage.getItem("noKeyBrain")) || {
-  "hi": "Hi! How can I help?",
-  "hello": "Hello! What do you want to make?",
-  "hey": "Hey! Ask me anything.",
-  "who are you": "I am a no-API learning chatbot made with HTML, CSS, and JavaScript.",
-  "what can you do": "I can chat, remember learned answers, search the web, and save my memory in this browser.",
-  "html": "HTML is the structure of a website.",
-  "css": "CSS controls how a website looks.",
-  "javascript": "JavaScript makes websites interactive.",
-  "chatgpt": "ChatGPT is a real AI model running on powerful servers. I am a smaller no-key browser chatbot.",
-  "warrior cats": "Warrior Cats is a book series about wild cat clans."
+const defaultBrain={
+  "who is firestar":"Firestar is a ThunderClan leader from Warrior Cats. He started as a kittypet named Rusty.",
+  "what type is eevee":"Eevee is a Normal-type Pokémon that can evolve into many different forms.",
+  "what is roblox":"Roblox is a game platform where people play and create games.",
+  "what is minecraft":"Minecraft is a sandbox game where players build, craft, explore, and survive.",
+  "who made this ai":"cheese4dinner made this AI using HTML, CSS, and JavaScript.",
+  "what is html":"HTML builds the structure of a webpage.",
+  "what is css":"CSS controls how a webpage looks.",
+  "what is javascript":"JavaScript makes webpages interactive.",
+  "what can you do":"I can chat, remember, search public websites, learn from results, and save my brain in this browser."
 };
 
-function saveBrain(){
-  localStorage.setItem("noKeyBrain", JSON.stringify(brain));
-}
+let brain={};
 
-function addMessage(text,type){
-  const div = document.createElement("div");
-  div.className = "msg " + type;
-  div.innerHTML = text;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-}
+function cleanText(text){return String(text).toLowerCase().trim().replace(/[?!.,]/g,"").replace(/\s+/g," ");}
+function escapeHTML(text){return String(text).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");}
+function getAccounts(){return JSON.parse(localStorage.getItem("aiAccountsV16"))||{};}
+function saveAccounts(accounts){localStorage.setItem("aiAccountsV16",JSON.stringify(accounts));}
+function userKey(){return "aiChatsV16_"+currentUser;}
+function currentKey(){return "aiCurrentChatV16_"+currentUser;}
+function brainKey(){return "aiBrainV16_"+currentUser;}
+function saveBrain(){localStorage.setItem(brainKey(),JSON.stringify(brain));}
 
-function clean(text){
-  return text.toLowerCase().trim().replace(/[?!.,]/g,"");
+function loadUserData(){
+  chats=JSON.parse(localStorage.getItem(userKey()))||{"Chat 1":[]};
+  currentChat=localStorage.getItem(currentKey())||"Chat 1";
+  brain=JSON.parse(localStorage.getItem(brainKey()))||defaultBrain;
 }
+function saveAll(){localStorage.setItem(userKey(),JSON.stringify(chats));localStorage.setItem(currentKey(),currentChat);}
+
+function createAccount(){
+  let u=document.getElementById("username").value.trim();
+  let p=document.getElementById("password").value.trim();
+  let msg=document.getElementById("loginMsg");
+  if(!u||!p){msg.innerText="Enter a username and password.";return;}
+  let accounts=getAccounts();
+  if(accounts[u]){msg.innerText="That account already exists.";return;}
+  accounts[u]=p; saveAccounts(accounts); msg.innerText="Account created! Now log in.";
+}
+function login(){
+  let u=document.getElementById("username").value.trim();
+  let p=document.getElementById("password").value.trim();
+  let msg=document.getElementById("loginMsg");
+  let accounts=getAccounts();
+  if(accounts[u]!==p){msg.innerText="Wrong username or password.";return;}
+  currentUser=u; loadUserData();
+  document.getElementById("loginScreen").style.display="none";
+  document.getElementById("app").style.display="flex";
+  document.getElementById("userLabel").innerText="👤 "+currentUser;
+  renderChat();
+}
+function logout(){currentUser=null;document.getElementById("app").style.display="none";document.getElementById("loginScreen").style.display="block";}
+
+function addMessage(name,text){
+  let chat=document.getElementById("chat");
+  chat.innerHTML+="<p><b>"+escapeHTML(name)+":</b></p><pre>"+escapeHTML(text)+"</pre>";
+  chat.scrollTop=chat.scrollHeight;
+}
+function remember(name,text){chats[currentChat].push({name:name,text:text});saveAll();addMessage(name,text);}
+function renderChat(){
+  document.getElementById("chat").innerHTML="";
+  document.getElementById("chatTitle").innerText="📂 "+currentChat;
+  chats[currentChat].forEach(m=>addMessage(m.name,m.text));
+  renderChatList();
+}
+function renderChatList(){
+  let list=document.getElementById("chatList"); list.innerHTML="";
+  Object.keys(chats).forEach(function(name){
+    let btn=document.createElement("button"); btn.className="chatBtn";
+    btn.textContent=(name===currentChat?"⭐ ":"📂 ")+name;
+    btn.onclick=function(){currentChat=name;saveAll();renderChat();};
+    list.appendChild(btn);
+  });
+}
+function newChat(){let name=prompt("Name this chat:");if(!name)return;if(chats[name]){alert("That chat already exists.");return;}chats[name]=[];currentChat=name;saveAll();renderChat();}
+function deleteChat(){if(!confirm("Delete this chat?"))return;delete chats[currentChat];let names=Object.keys(chats);if(names.length===0){chats["Chat 1"]=[];currentChat="Chat 1";}else currentChat=names[0];saveAll();renderChat();}
 
 function similarity(a,b){
-  a = clean(a);
-  b = clean(b);
-
-  let wordsA = a.split(" ");
-  let wordsB = b.split(" ");
-  let score = 0;
-
-  for(let word of wordsA){
-    if(wordsB.includes(word) || b.includes(word)){
-      score++;
-    }
-  }
-
+  a=cleanText(a); b=cleanText(b);
+  let words=a.split(" ").filter(w=>w.length>1);
+  let score=0;
+  words.forEach(w=>{if(b.includes(w))score++;});
   return score;
 }
+function brainAnswer(q){
+  let clean=cleanText(q);
+  if(brain[clean])return "🧠 From my saved brain:\n\n"+brain[clean];
+  let best="", bestScore=0;
+  for(let key in brain){let s=similarity(clean,key);if(s>bestScore){bestScore=s;best=key;}}
+  if(bestScore>=2)return "🧠 From my saved brain:\n\n"+brain[best];
+  return null;
+}
+function learn(question,answer){brain[cleanText(question)]=answer;saveBrain();}
+function isMath(text){return /^[0-9+\-*/(). %]+$/.test(text);}
+function doMath(text){try{return "The answer is: "+Function("return "+text.replaceAll("%","/100"))();}catch(e){return "I couldn't solve that math problem.";}}
 
-function searchWeb(q){
-  let url = "https://www.google.com/search?q=" + encodeURIComponent(q);
-  window.open(url,"_blank");
+async function fetchJSON(url,timeout=6000){
+  let controller=new AbortController();
+  let timer=setTimeout(()=>controller.abort(),timeout);
+  try{let r=await fetch(url,{signal:controller.signal});clearTimeout(timer);if(!r.ok)return null;return await r.json();}
+  catch(e){clearTimeout(timer);return null;}
 }
 
-function answer(question){
-  let q = clean(question);
-
-  if(q.startsWith("learn:")){
-    let text = question.substring(6);
-    let parts = text.split("=");
-
-    if(parts.length < 2){
-      return "Teach me like this:<br><b>learn: question = answer</b>";
-    }
-
-    let newQuestion = clean(parts[0]);
-    let newAnswer = parts.slice(1).join("=").trim();
-
-    brain[newQuestion] = newAnswer;
-    saveBrain();
-
-    return "I learned that.<br><br><b>" + newQuestion + "</b><br>" + newAnswer;
-  }
-
-  if(q === "show brain"){
-    return "<pre>" + JSON.stringify(brain,null,2) + "</pre>";
-  }
-
-  if(q === "clear brain"){
-    localStorage.removeItem("noKeyBrain");
-    location.reload();
-    return "Memory cleared.";
-  }
-
-  if(brain[q]){
-    return brain[q];
-  }
-
-  let bestKey = "";
-  let bestScore = 0;
-
-  for(let key in brain){
-    let score = similarity(q,key);
-
-    if(score > bestScore){
-      bestScore = score;
-      bestKey = key;
-    }
-  }
-
-  if(bestScore > 0){
-    return brain[bestKey];
-  }
-
-  return `
-    I do not know that yet.<br><br>
-    <button class="searchBtn" onclick="searchWeb('${question.replace(/'/g,"")}')">Search the web</button>
-    <br><br>
-    After you find the answer, teach me like this:<br>
-    <b>learn: ${q} = the answer goes here</b>
-  `;
+async function searchWikipedia(q){
+  let data=await fetchJSON("https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch="+encodeURIComponent(q)+"&format=json&origin=*");
+  if(!(data&&data.query&&data.query.search&&data.query.search[0]))return null;
+  let title=data.query.search[0].title;
+  let sum=await fetchJSON("https://en.wikipedia.org/api/rest_v1/page/summary/"+encodeURIComponent(title));
+  if(!(sum&&sum.extract))return null;
+  return "🌐 Wikipedia: "+title+"\n"+sum.extract+"\nLink: "+(sum.content_urls&&sum.content_urls.desktop?sum.content_urls.desktop.page:"https://en.wikipedia.org/wiki/"+encodeURIComponent(title));
+}
+async function searchOpenLibrary(q){
+  let data=await fetchJSON("https://openlibrary.org/search.json?q="+encodeURIComponent(q)+"&limit=3");
+  if(!(data&&data.docs&&data.docs.length))return null;
+  let out="📚 Open Library books:\n";
+  data.docs.slice(0,3).forEach((b,i)=>{out+=(i+1)+". "+(b.title||"No title")+(b.author_name?" by "+b.author_name.slice(0,2).join(", "):"")+(b.first_publish_year?" ("+b.first_publish_year+")":"")+"\n";});
+  return out;
+}
+async function searchWiktionary(q){
+  let word=cleanText(q).split(" ").pop();
+  if(!word||word.length<3)return null;
+  let data=await fetchJSON("https://en.wiktionary.org/api/rest_v1/page/definition/"+encodeURIComponent(word));
+  if(!data||!data.en||!data.en[0]||!data.en[0].definitions||!data.en[0].definitions[0])return null;
+  return "📖 Wiktionary definition of "+word+":\n"+data.en[0].definitions[0].definition.replace(/<[^>]*>/g,"");
+}
+async function searchHackerNews(q){
+  let data=await fetchJSON("https://hn.algolia.com/api/v1/search?query="+encodeURIComponent(q)+"&tags=story&hitsPerPage=3");
+  if(!(data&&data.hits&&data.hits.length))return null;
+  let out="🧪 Hacker News results:\n";
+  data.hits.forEach((h,i)=>{out+=(i+1)+". "+h.title+"\n"+(h.url||("https://news.ycombinator.com/item?id="+h.objectID))+"\n";});
+  return out;
+}
+async function searchStackExchange(q){
+  let data=await fetchJSON("https://api.stackexchange.com/2.3/search/advanced?order=desc&sort=relevance&site=stackoverflow&q="+encodeURIComponent(q)+"&pagesize=3");
+  if(!(data&&data.items&&data.items.length))return null;
+  let out="💻 Stack Overflow results:\n";
+  data.items.forEach((it,i)=>{out+=(i+1)+". "+it.title.replace(/&quot;/g,'"').replace(/&#39;/g,"'")+"\n"+it.link+"\n";});
+  return out;
+}
+async function searchReddit(q){
+  let data=await fetchJSON("https://www.reddit.com/search.json?q="+encodeURIComponent(q)+"&limit=3",5000);
+  if(!(data&&data.data&&data.data.children&&data.data.children.length))return null;
+  let out="👽 Reddit results:\n";
+  data.data.children.forEach((post,i)=>{let p=post.data;out+=(i+1)+". "+p.title+"\nr/"+p.subreddit+" - https://www.reddit.com"+p.permalink+"\n";});
+  return out;
+}
+async function searchDuckDuckGoPage(q){
+  // This opens a real web search page. Reading search result pages directly is usually blocked by browser safety rules.
+  return "🔎 Web search page:\nhttps://duckduckgo.com/?q="+encodeURIComponent(q)+"\nhttps://www.google.com/search?q="+encodeURIComponent(q);
 }
 
-function send(){
-  let text = input.value.trim();
-  if(text === "") return;
-
-  addMessage(text,"user");
-  input.value = "";
-
-  addMessage("Thinking...","bot");
-
-  setTimeout(() => {
-    let bots = document.querySelectorAll(".bot");
-    bots[bots.length - 1].innerHTML = answer(text);
-  },500);
+async function webSearchAll(question){
+  let results=[];
+  let searches=[searchWikipedia,searchOpenLibrary,searchWiktionary,searchHackerNews,searchStackExchange,searchReddit];
+  for(let fn of searches){let r=await fn(question);if(r)results.push(r);}
+  results.push(await searchDuckDuckGoPage(question));
+  return results;
 }
 
-input.addEventListener("keydown",function(e){
-  if(e.key === "Enter") send();
-});
+async function send(){
+  let box=document.getElementById("input");
+  let question=box.value.trim();
+  if(question==="")return;
+  remember("You 🙂",question); box.value="";
+  let lower=cleanText(question);
+
+  if(lower.startsWith("learn:")){
+    let parts=question.substring(6).split("=");
+    if(parts.length<2){remember("AI 🤖","Teach me like this: learn: question = answer");return;}
+    learn(parts[0],parts.slice(1).join("=").trim());
+    remember("AI 🤖","I learned it and saved it in my brain. ✅"); return;
+  }
+  if(lower==="show brain"){remember("AI 🤖",JSON.stringify(brain,null,2));return;}
+  if(lower==="clear brain"){localStorage.removeItem(brainKey());brain=defaultBrain;saveBrain();remember("AI 🤖","Brain reset to default. ✅");return;}
+  if(lower==="hi"||lower==="hello"||lower==="hey"){remember("AI 🤖","Hi! 👋 Ask me something, or type learn: question = answer to teach me.");return;}
+  if(lower==="what is your name"){remember("AI 🤖","I'm Homemade AI Version 16 🌐");return;}
+  if(lower.includes("remember")||lower.includes("what did i say")){remember("AI 🤖","Here is what I remember in this chat:\n\n"+chats[currentChat].map(m=>m.name+": "+m.text).join("\n"));return;}
+  if(isMath(lower)){remember("AI 🤖",doMath(lower));return;}
+
+  let saved=brainAnswer(question);
+  if(saved){remember("AI 🤖",saved);return;}
+
+  remember("AI 🤖","🔎 I don't know yet. Searching Wikipedia, Open Library, Wiktionary, Hacker News, Stack Overflow, Reddit, and search pages...");
+  let results=await webSearchAll(question);
+  chats[currentChat].pop(); saveAll(); renderChat();
+
+  if(results.length){
+    let answer="Here is what I found:\n\n"+results.join("\n\n----------------\n\n");
+    let firstGood=results.find(r=>r.startsWith("🌐 Wikipedia")||r.startsWith("📖 Wiktionary")||r.startsWith("📚 Open Library"));
+    if(firstGood){learn(question,firstGood);answer+="\n\n🧠 I saved the best result to my brain, so I can answer faster next time.";}
+    remember("AI 🤖",answer);
+  }else{
+    remember("AI 🤖","I could not read any website results. Try clicking a web search manually:\nhttps://duckduckgo.com/?q="+encodeURIComponent(question));
+  }
+}
+
+function exportBrain(){
+  let blob=new Blob([JSON.stringify(brain,null,2)],{type:"application/json"});
+  let a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="homemade-ai-brain.json"; a.click();
+}
+function clearBrainButton(){if(confirm("Clear saved brain?")){localStorage.removeItem(brainKey());brain=defaultBrain;saveBrain();alert("Brain reset.");}}
+
+document.getElementById("createBtn").addEventListener("click",createAccount);
+document.getElementById("loginBtn").addEventListener("click",login);
+document.getElementById("logoutBtn").addEventListener("click",logout);
+document.getElementById("sendBtn").addEventListener("click",send);
+document.getElementById("newBtn").addEventListener("click",newChat);
+document.getElementById("deleteBtn").addEventListener("click",deleteChat);
+document.getElementById("exportBtn").addEventListener("click",exportBrain);
+document.getElementById("clearBrainBtn").addEventListener("click",clearBrainButton);
+document.getElementById("input").addEventListener("keydown",function(e){if(e.key==="Enter")send();});
 </script>
-
 </body>
 </html>
